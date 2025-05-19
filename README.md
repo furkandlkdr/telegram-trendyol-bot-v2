@@ -1,4 +1,136 @@
-# Trendyol Fiyat Takip Botu
+# [EN] Trendyol Price Tracking Bot
+
+This bot tracks product prices on Trendyol and sends notifications via Telegram when prices change.
+
+## Features
+
+- Support for Trendyol.com and ty.gl (shortened) links
+- Product addition (`/ekle` command or by directly sending a link)
+- Product removal (`/sil` command)
+- Listing tracked products (`/listele` command)
+- Regular price checking
+- Automatic notifications for price changes
+- Code optimized for low-power devices like Raspberry Pi
+- Multi-group support with permissions
+
+## Installation
+
+### Requirements
+
+- Python 3.6 or newer
+- pip (Python package manager)
+- Telegram Bot Token (obtainable from BotFather)
+
+### Steps
+
+1. Clone or download this repository:
+
+```bash
+git clone https://github.com/furkandlkdr/telegram-trendyol-bot-v2.git
+cd telegram-trendyol-bot-v2
+```
+
+2. Create and activate a virtual Python environment:
+
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+# or
+venv\Scripts\activate  # Windows
+```
+
+3. Install the required libraries:
+
+```bash
+pip install -r requirements.txt
+```
+
+4. Edit the `.env` file to add your bot token and allowed group IDs:
+
+```
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+CHECK_INTERVAL=30 # Minutes
+ALLOWED_GROUP_IDS=-1001234567890,-1009876543210 # Your group id's
+```
+
+5. Start the bot:
+
+```bash
+python main.py
+```
+
+## Usage
+
+1. Add the bot to your Telegram group and add this group's ID to the `ALLOWED_GROUP_IDS` variable in the `.env` file.
+   - To find the group ID: Add the bot to the group, send a message, and visit `https://api.telegram.org/bot{TOKEN}/getUpdates`.
+
+2. Start the bot in Telegram by sending the `/start` command.
+
+3. To add a product:
+   - Use the `/ekle https://www.trendyol.com/...` command
+   - Or send a Trendyol link directly
+
+4. To list tracked products:
+   - Send the `/listele` command
+
+5. To remove a product from tracking:
+   - Use the `/sil https://www.trendyol.com/...` command
+
+## Automatic Startup (for Raspberry Pi)
+
+To make the bot start automatically on system boot on a Raspberry Pi, create a systemd service file:
+
+```bash
+sudo nano /etc/systemd/system/trendyol-bot.service
+```
+
+Add the following to the file **(adjust paths according to your setup!)**:
+
+```
+[Unit]
+Description=Trendyol Price Tracking Bot
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/telegram-trendyol-bot-v2
+ExecStart=/home/pi/telegram-trendyol-bot-v2/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start the service:
+
+```bash
+sudo systemctl enable trendyol-bot.service
+sudo systemctl start trendyol-bot.service
+```
+
+To check the service status:
+
+```bash
+sudo systemctl status trendyol-bot.service
+```
+
+## File Structure
+
+- `main.py`: Main bot file, manages Telegram bot functionality
+- `scraper.py`: Scrapes price and product information from Trendyol
+- `data_manager.py`: Manages product data in JSON format
+- `config.py`: Contains bot settings
+- `tracked_products.json`: Contains tracked product data (automatically created)
+- `requirements.txt`: Lists required Python libraries
+
+## Note
+
+This bot is designed for personal use. Trendyol may block bot usage. In such cases, the bot may not work properly.
+
+---
+
+# [TR] Trendyol Fiyat Takip Botu
 
 Bu bot, Trendyol'daki ürünlerin fiyatlarını takip eder ve fiyat değişikliklerinde Telegram üzerinden bildirim gönderir.
 
@@ -25,7 +157,7 @@ Bu bot, Trendyol'daki ürünlerin fiyatlarını takip eder ve fiyat değişiklik
 1. Bu repo'yu klonlayın veya indirin:
 
 ```bash
-git clone https://github.com/username/trendyol-fiyat-takip-botu.git
+git clone https://github.com/furkandlkdr/trendyol-fiyat-takip-botu.git
 cd trendyol-fiyat-takip-botu
 ```
 
