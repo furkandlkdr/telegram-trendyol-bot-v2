@@ -1,0 +1,29 @@
+# Environment variables
+.env
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Tracked products data
+tracked_products.json
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
