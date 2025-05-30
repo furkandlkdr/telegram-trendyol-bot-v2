@@ -7,7 +7,7 @@ from telegram import Update, ParseMode
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from scraper import scrape_product_info, is_valid_trendyol_url
 from data_manager import add_product, remove_product, get_all_products, update_product_price
-from config import TELEGRAM_BOT_TOKEN, CHECK_INTERVAL, ALLOWED_GROUP_IDS
+from config import TELEGRAM_BOT_TOKEN, CHECK_INTERVAL, ALLOWED_GROUP_IDS, TRENDYOL_URL_PATTERN
 
 # Configure logging
 logging.basicConfig(
@@ -40,7 +40,7 @@ def start(update: Update, context: CallbackContext):
 
 def extract_url(text):
     """Extract URL from text."""
-    url_pattern = r'https?://(?:www\.)?(trendyol\.com|ty\.gl)[^\s]+'
+    url_pattern = TRENDYOL_URL_PATTERN.replace('.*', '[^\\s]+')
     match = re.search(url_pattern, text)
     return match.group(0) if match else None
 
@@ -300,10 +300,9 @@ def main():
     dispatcher.add_handler(CommandHandler("ekle", add_product_handler))
     dispatcher.add_handler(CommandHandler("sil", remove_product_handler))
     dispatcher.add_handler(CommandHandler("listele", list_products))
-    
-    # Message handler for Trendyol links
+      # Message handler for Trendyol links
     dispatcher.add_handler(MessageHandler(
-        Filters.text & ~Filters.command & Filters.regex(r'https?://(www\.)?(trendyol\.com|ty\.gl)'), 
+        Filters.text & ~Filters.command & Filters.regex(TRENDYOL_URL_PATTERN), 
         url_handler
     ))
     
