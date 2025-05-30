@@ -25,9 +25,6 @@ ALLOWED_GROUP_IDS = [int(group_id.strip()) for group_id in ALLOWED_GROUP_IDS_STR
 if not ALLOWED_GROUP_IDS:
     logger.warning("No ALLOWED_GROUP_IDS set in .env file. Bot will not respond to any group.")
 
-# Trendyol URL pattern
-TRENDYOL_URL_PATTERN = r'https?://(www\.)?(trendyol\.com|ty\.gl|tyml\.gl).*'
-
 # File to store tracked product data
 DATA_FILE = 'tracked_products.json'
 

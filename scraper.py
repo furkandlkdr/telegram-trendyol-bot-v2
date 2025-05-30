@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import re
-from config import USER_AGENT, TRENDYOL_URL_PATTERN
+from config import USER_AGENT
 import logging
 
 # Configure logging
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def is_valid_trendyol_url(url):
     """Check if the URL is a valid Trendyol URL."""
-    return bool(re.match(TRENDYOL_URL_PATTERN, url))
+    return bool(re.match(r'https?://(www\.)?(trendyol\.com|ty\.gl|tyml\.gl|trendyol-milla\.com).*', url))
 
 def get_full_url(url):
     """Follow redirects to get the full URL if it's a shortened link."""
