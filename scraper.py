@@ -114,3 +114,4 @@ def scrape_product_info(url):
     except Exception as e:
         logger.error(f"Error scraping {url}: {e}")
         return None, None, f"Error scraping product: {str(e)}"
+
