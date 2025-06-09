@@ -79,6 +79,15 @@ def scrape_product_info(url):
         elif soup.find('h1'):
             product_name = soup.find('h1').text.strip()
         
+        # Check if product is sold out
+        sold_out_button = soup.select_one('.product-button-container .add-to-basket.sold-out')
+        is_sold_out = False
+        
+        if sold_out_button and "Tükendi" in sold_out_button.text:
+            is_sold_out = True
+            logger.info(f"Product is sold out: {product_name}")
+            return product_name, 0, "Tükendi"
+        
         # Try different price selectors
         price = None
         price_selectors = [
