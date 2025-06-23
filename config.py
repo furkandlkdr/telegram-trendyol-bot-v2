@@ -22,8 +22,14 @@ CHECK_INTERVAL = int(os.getenv('CHECK_INTERVAL', '30'))
 ALLOWED_GROUP_IDS_STR = os.getenv('ALLOWED_GROUP_IDS', '')
 ALLOWED_GROUP_IDS = [int(group_id.strip()) for group_id in ALLOWED_GROUP_IDS_STR.split(',') if group_id.strip()]
 
+# Admin Chat ID for error notifications
+ADMIN_CHAT_ID = os.getenv('ADMIN_CHAT_ID', '')
+
 if not ALLOWED_GROUP_IDS:
     logger.warning("No ALLOWED_GROUP_IDS set in .env file. Bot will not respond to any group.")
+
+if not ADMIN_CHAT_ID:
+    logger.warning("No ADMIN_CHAT_ID set in .env file. Error notifications will not be sent.")
 
 # File to store tracked product data
 DATA_FILE = 'tracked_products.json'

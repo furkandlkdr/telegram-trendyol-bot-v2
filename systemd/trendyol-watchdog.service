@@ -1,0 +1,29 @@
+[Unit]
+Description=Trendyol Bot Watchdog
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/telegram-trendyol-bot
+Environment=PATH=/home/pi/telegram-trendyol-bot/venv/bin
+ExecStart=/home/pi/telegram-trendyol-bot/venv/bin/python watchdog.py
+Restart=always
+RestartSec=30
+KillMode=mixed
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=trendyol-watchdog
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/pi/telegram-trendyol-bot
+
+[Install]
+WantedBy=multi-user.target

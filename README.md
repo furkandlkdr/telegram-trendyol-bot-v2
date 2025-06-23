@@ -1,4 +1,4 @@
-# [EN] Trendyol Price Tracking Bot v2
+# [EN] Trendyol Price Tracking Bot
 
 An advanced Telegram bot that tracks product prices on Trendyol and sends smart notifications when prices change. Designed for efficiency and reliability with enhanced user experience.
 
@@ -31,8 +31,8 @@ An advanced Telegram bot that tracks product prices on Trendyol and sends smart 
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/furkandlkdr/telegram-trendyol-bot-v2.git
-cd telegram-trendyol-bot-v2
+git clone https://github.com/furkandlkdr/telegram-trendyol-bot.git
+cd telegram-trendyol-bot
 ```
 
 2. **Create and activate virtual environment:**
@@ -135,13 +135,13 @@ sudo nano /etc/systemd/system/trendyol-bot.service
 
 ```ini
 [Unit]
-Description=Trendyol Price Tracking Bot v2
+Description=Trendyol Price Tracking Bot
 After=network.target
 
 [Service]
 User=pi
-WorkingDirectory=/home/pi/telegram-trendyol-bot-v2
-ExecStart=/home/pi/telegram-trendyol-bot-v2/venv/bin/python main.py
+WorkingDirectory=/home/pi/telegram-trendyol-bot
+ExecStart=/home/pi/telegram-trendyol-bot/venv/bin/python main.py
 Restart=always
 RestartSec=10
 
@@ -163,7 +163,7 @@ sudo systemctl status trendyol-bot.service
 ## 📁 Project Structure
 
 ```
-telegram-botv2/
+telegram-trendyol-bot/
 ├── main.py              # 🤖 Main bot logic and Telegram handlers
 ├── scraper.py           # 🕷️ Trendyol web scraping functionality
 ├── data_manager.py      # 💾 JSON data management (CRUD operations)
@@ -216,7 +216,7 @@ telegram-botv2/
 - Try with different products
 
 **Duplicate notifications:**
-- Fixed in v2 with improved scheduler management
+- Fixed with improved scheduler management
 - Restart the bot if still occurring
 
 **Memory issues on Raspberry Pi:**
@@ -255,7 +255,7 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 
 ---
 
-# [TR] Trendyol Fiyat Takip Botu v2
+# [TR] Trendyol Fiyat Takip Botu
 
 Trendyol'daki ürün fiyatlarını takip eden ve fiyat değişikliklerinde akıllı bildirimler gönderen gelişmiş Telegram botu. Verimlilik ve güvenilirlik odaklı, geliştirilmiş kullanıcı deneyimi ile tasarlanmıştır.
 
@@ -288,8 +288,8 @@ Trendyol'daki ürün fiyatlarını takip eden ve fiyat değişikliklerinde akıl
 
 1. **Repoyu klonlayın:**
 ```bash
-git clone https://github.com/furkandlkdr/telegram-trendyol-bot-v2.git
-cd telegram-trendyol-bot-v2
+git clone https://github.com/furkandlkdr/telegram-trendyol-bot.git
+cd telegram-trendyol-bot
 ```
 
 2. **Sanal ortam oluşturun ve etkinleştirin:**
@@ -392,13 +392,13 @@ sudo nano /etc/systemd/system/trendyol-bot.service
 
 ```ini
 [Unit]
-Description=Trendyol Fiyat Takip Botu v2
+Description=Trendyol Fiyat Takip Botu
 After=network.target
 
 [Service]
 User=pi
-WorkingDirectory=/home/pi/telegram-trendyol-bot-v2
-ExecStart=/home/pi/telegram-trendyol-bot-v2/venv/bin/python main.py
+WorkingDirectory=/home/pi/telegram-trendyol-bot
+ExecStart=/home/pi/telegram-trendyol-bot/venv/bin/python main.py
 Restart=always
 RestartSec=10
 
@@ -420,7 +420,7 @@ sudo systemctl status trendyol-bot.service
 ## 📁 Proje Yapısı
 
 ```
-telegram-botv2/
+telegram-trendyol-bot/
 ├── main.py              # 🤖 Ana bot mantığı ve Telegram işleyicileri
 ├── scraper.py           # 🕷️ Trendyol web kazıma işlevselliği
 ├── data_manager.py      # 💾 JSON veri yönetimi (CRUD işlemleri)
@@ -473,7 +473,7 @@ telegram-botv2/
 - Farklı ürünlerle deneyin
 
 **Çift bildirim:**
-- v2'de geliştirilmiş zamanlayıcı yönetimiyle düzeltildi
+- Geliştirilmiş zamanlayıcı yönetimiyle düzeltildi
 - Hala oluşuyorsa botu yeniden başlatın
 
 **Raspberry Pi'de bellek sorunları:**
@@ -496,6 +496,180 @@ Bot önemli olayları loglar. Konsol çıktısında şunları kontrol edin:
 - **Güvenilirlik**: Sağlam olmasına rağmen, siteler yapı değiştirirse web kazıma bozulabilir
 - **Gizlilik**: Tüm veriler yerel olarak JSON formatında saklanır
 
+## 🛡️ Hata İzleme ve Bildirimler
+
+### Otomatik Hata Bildirimleri
+
+Bot artık hataları otomatik olarak admin'e bildirir:
+
+- 🚨 **Kritik Hatalar**: Bot çöktüğünde anında bildirim
+- ⚠️ **Scraping Hataları**: Çok sayıda scraping hatası durumunda uyarı
+- 📊 **Watchdog Raporları**: Bot durumu hakkında düzenli bilgiler
+
+### Admin Chat ID Ayarlama
+
+`.env` dosyanıza admin chat ID'nizi ekleyin:
+
+```env
+ADMIN_CHAT_ID=123456789
+```
+
+**Chat ID'nizi bulmak için:**
+1. Bot'unuza `/start` mesajı gönderin
+2. `https://api.telegram.org/bot{BOT_TOKEN}/getUpdates` adresini ziyaret edin
+3. `"from":{"id": 123456789}` değerini kopyalayın
+
+### Watchdog Sistemi
+
+Watchdog scripti botunuzu sürekli izler:
+
+- ✅ **Process İzleme**: Bot çalışıp çalışmadığını kontrol eder
+- 🔄 **Otomatik Restart**: Bot durduğunda otomatik yeniden başlatır  
+- 📱 **Telegram Bildirimleri**: Tüm olaylar için bildirim gönderir
+- 📝 **Detaylı Loglama**: Tüm aktiviteler loglanır
+
+## 🥧 Raspberry Pi Özel Kurulum
+
+### Otomatik Kurulum
+
+```bash
+# Projeyi klonlayın
+git clone https://github.com/furkandlkdr/telegram-trendyol-bot.git
+cd telegram-trendyol-bot
+
+# Kurulum scriptini çalıştırın
+chmod +x install_raspberry.sh
+./install_raspberry.sh
+```
+
+### Manuel Kurulum
+
+**1. Sistem hazırlığı:**
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y python3 python3-pip python3-venv git curl
+```
+
+**2. Proje kurulumu:**
+```bash
+git clone https://github.com/furkandlkdr/telegram-trendyol-bot.git
+cd telegram-trendyol-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+**3. Çevre değişkenleri:**
+```bash
+cp .env.example .env
+nano .env  # Ayarlarınızı girin
+```
+
+**4. Systemd servisleri:**
+```bash
+sudo cp systemd/trendyol-bot.service /etc/systemd/system/
+sudo cp systemd/trendyol-watchdog.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable trendyol-bot.service
+sudo systemctl enable trendyol-watchdog.service
+```
+
+**5. Servisleri başlatın:**
+```bash
+sudo systemctl start trendyol-bot.service
+sudo systemctl start trendyol-watchdog.service
+```
+
+### Raspberry Pi İzleme Komutları
+
+**Servis durumu:**
+```bash
+sudo systemctl status trendyol-bot.service
+sudo systemctl status trendyol-watchdog.service
+```
+
+**Canlı loglar:**
+```bash
+sudo journalctl -u trendyol-bot.service -f
+sudo journalctl -u trendyol-watchdog.service -f
+```
+
+**Servis yönetimi:**
+```bash
+sudo systemctl restart trendyol-bot.service
+sudo systemctl stop trendyol-bot.service
+sudo systemctl start trendyol-bot.service
+```
+
+**Sistem kaynaklarını izleme:**
+```bash
+htop                    # CPU ve RAM kullanımı
+df -h                   # Disk kullanımı
+free -h                 # Bellek durumu
+journalctl --disk-usage # Log disk kullanımı
+```
+
+### Performans Optimizasyonları
+
+**Bellek optimizasyonu:**
+```bash
+# Swap dosyası oluştur (isteğe bağlı)
+sudo fallocate -l 1G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# /etc/fstab'a ekle
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+**Log döngüsü:**
+```bash
+# Log boyutunu sınırla
+sudo nano /etc/systemd/journald.conf
+# Şu satırları uncomment edin:
+# SystemMaxUse=50M
+# MaxRetentionSec=1week
+
+sudo systemctl restart systemd-journald
+```
+
+### Sorun Giderme
+
+**Bot başlamıyor:**
+```bash
+# Detaylı log kontrol
+sudo journalctl -u trendyol-bot.service --no-pager
+
+# Manuel test
+cd /home/pi/telegram-trendyol-bot
+source venv/bin/activate
+python main.py
+```
+
+**Watchdog çalışmıyor:**
+```bash
+# Process kontrolü
+ps aux | grep python
+ps aux | grep watchdog
+
+# Manuel watchdog testi
+cd /home/pi/telegram-trendyol-bot
+source venv/bin/activate
+python watchdog.py
+```
+
+**Bellek sorunu:**
+```bash
+# Bellek kullanımını kontrol et
+free -h
+sudo systemctl status
+
+# Gereksiz servisleri durdur
+sudo systemctl disable bluetooth.service
+sudo systemctl disable hciuart.service
+```
+
 ## 🤝 Katkıda Bulunma
 
 Katkılar memnuniyetle karşılanır! Lütfen şunlar için pull request gönderin veya issue açın:
@@ -503,6 +677,10 @@ Katkılar memnuniyetle karşılanır! Lütfen şunlar için pull request gönder
 - Yeni özellikler
 - Dokümantasyon iyileştirmeleri
 - Performans optimizasyonları
+
+## 📄 Lisans
+
+Bu proje açık kaynaklıdır ve MIT Lisansı altında mevcuttur.
 
 ## 🔗 Linkler
 

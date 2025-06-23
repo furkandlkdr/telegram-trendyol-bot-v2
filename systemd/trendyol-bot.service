@@ -1,0 +1,31 @@
+[Unit]
+Description=Trendyol Price Tracking Bot
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/telegram-trendyol-bot
+Environment=PATH=/home/pi/telegram-trendyol-bot/venv/bin
+ExecStart=/home/pi/telegram-trendyol-bot/venv/bin/python main.py
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+KillMode=mixed
+TimeoutStopSec=30
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=trendyol-bot
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/pi/telegram-trendyol-bot
+
+[Install]
+WantedBy=multi-user.target

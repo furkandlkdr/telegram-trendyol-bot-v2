@@ -27,3 +27,5 @@ build/
 .vscode/
 *.swp
 *.swo
+
+fix_watchdog.sh

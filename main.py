@@ -3,11 +3,13 @@ import re
 import time
 import threading
 import schedule
+import traceback
+from datetime import datetime
 from telegram import Update, ParseMode
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 from scraper import scrape_product_info, is_valid_trendyol_url
 from data_manager import add_product, remove_product, get_all_products, update_product_price
-from config import TELEGRAM_BOT_TOKEN, CHECK_INTERVAL, ALLOWED_GROUP_IDS
+from config import TELEGRAM_BOT_TOKEN, CHECK_INTERVAL, ALLOWED_GROUP_IDS, ADMIN_CHAT_ID
 
 # Configure logging
 logging.basicConfig(
@@ -260,98 +262,27 @@ def check_prices():
         logger.info("No products to check")
         return
     
+    error_count = 0
+    
     for chat_id, products in data.items():
         for url, product_info in list(products.items()):
-            product_name = product_info['product_name']
-            current_price = product_info['current_price']
-            
-            logger.info(f"Checking price for {product_name} at {url}")
-            
-            # Fetch new product info
-            new_product_name, new_price, error = scrape_product_info(url)
-            
-            # Handle sold out status
-            if error == "Tükendi":
-                # If the product was available before but is now sold out
-                if current_price > 0:
-                    context.bot.send_message(
-                        chat_id=chat_id,
-                        text=f'⚠️ Ürün tükendi!\n\n'
-                             f'Ürün: {product_name}\n'
-                             f'Önceki Fiyat: {current_price:.2f} TL\n'
-                             f'Durum: Tükendi\n\n'
-                             f'<a href="{url}">Ürün Linki</a>',
-                        parse_mode=ParseMode.HTML,
-                        disable_web_page_preview=True
-                    )
-                    # Update the price to 0 to mark as sold out
-                    update_product_price(chat_id, url, 0)
-                continue
-            elif error:
-                logger.error(f"Error checking {url}: {error}")
-                continue
-            
-            if not new_price:
-                logger.error(f"Could not get price for {url}")
-                continue
-            
-            # If the product was sold out before but is now available
-            if current_price == 0 and new_price > 0:
-                context.bot.send_message(
-                    chat_id=chat_id,
-                    text=f'🎉 Ürün tekrar stokta!\n\n'
-                         f'Ürün: {product_name}\n'
-                         f'Güncel Fiyat: {new_price:.2f} TL\n\n'
-                         f'<a href="{url}">Ürün Linki</a>',
-                    parse_mode=ParseMode.HTML,
-                    disable_web_page_preview=True
-                )
-                update_product_price(chat_id, url, new_price)
-                continue
-            
-            # If price has changed
-            if new_price != current_price:
-                price_diff = new_price - current_price
-                percentage = (price_diff / current_price) * 100 if current_price > 0 else 0
-                
-                if price_diff > 0:
-                    message = (
-                        f'⚠️ Fiyat arttı!\n\n'
-                        f'Ürün: {product_name}\n'
-                        f'Önceki Fiyat: {current_price:.2f} TL\n'
-                        f'Yeni Fiyat: {new_price:.2f} TL\n'
-                        f'Fark: +{price_diff:.2f} TL ({percentage:.1f}%)\n\n'
-                        f'<a href="{url}">Ürün Linki</a>'
-                    )
-                else:
-                    message = (
-                        f'🔥 Fiyat düştü!\n\n'
-                        f'Ürün: {product_name}\n'
-                        f'Önceki Fiyat: {current_price:.2f} TL\n'
-                        f'Yeni Fiyat: {new_price:.2f} TL\n'
-                        f'Fark: {price_diff:.2f} TL ({percentage:.1f}%)\n\n'
-                        f'<a href="{url}">Ürün Linki</a>'
-                    )
-                
-                context.bot.send_message(
-                    chat_id=chat_id,
-                    text=message,
-                    parse_mode=ParseMode.HTML,
-                    disable_web_page_preview=True
-                )
-                
-                # Update the price
-                update_product_price(chat_id, url, new_price)
-            
             try:
+                product_name = product_info['product_name']
+                current_price = product_info['current_price']
+                
+                logger.info(f"Checking price for {product_name} at {url}")
+                
+                # Fetch new product info
                 _, new_price, error = scrape_product_info(url)
                 
                 if error:
                     logger.error(f"Error checking {url}: {error}")
+                    error_count += 1
                     continue
                 
                 if new_price is None:
                     logger.error(f"Could not get price for {url}")
+                    error_count += 1
                     continue
                 
                 # If the price has changed
@@ -388,11 +319,25 @@ def check_prices():
                         logger.info(f"Price change notification sent to {chat_id}")
                     except Exception as send_error:
                         logger.error(f"Failed to send notification to {chat_id}: {send_error}")
+                        error_count += 1
                 else:
                     logger.info(f"No price change for {product_name}")
             
             except Exception as e:
                 logger.error(f"Error checking price for {url}: {e}")
+                error_count += 1
+    
+    # Send admin notification if there are too many errors
+    if error_count > 5 and ADMIN_CHAT_ID:
+        admin_message = f"""
+⚠️ <b>Fiyat Kontrol Uyarısı</b>
+
+<b>Zaman:</b> {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
+<b>Hata Sayısı:</b> {error_count}
+
+Çok sayıda hata tespit edildi. Bağlantı veya site yapısı sorunları olabilir.
+        """
+        send_admin_notification(admin_message)
 
 def run_scheduler():
     """Run the scheduler in a separate thread."""
@@ -400,12 +345,58 @@ def run_scheduler():
         schedule.run_pending()
         time.sleep(1)
 
+def send_admin_notification(message):
+    """Send notification to admin chat."""
+    global _bot_instance
+    
+    if not _bot_instance or not ADMIN_CHAT_ID:
+        return False
+        
+    try:
+        _bot_instance.send_message(
+            chat_id=ADMIN_CHAT_ID,
+            text=message,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send admin notification: {e}")
+        return False
+
 def error(update: Update, context: CallbackContext):
-    """Log errors caused by updates."""
-    logger.error(f"Update {update} caused error {context.error}")
+    """Log errors caused by updates and notify admin."""
+    error_message = str(context.error)
+    
+    # Log the error
+    logger.error(f"Update {update} caused error {error_message}")
+    
+    # Prepare detailed error message for admin
+    if ADMIN_CHAT_ID:
+        try:
+            admin_message = f"""
+🚨 <b>Trendyol Bot Hatası</b>
+
+<b>Hata:</b> <code>{error_message}</code>
+
+<b>Zaman:</b> {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
+
+<b>Update:</b> <code>{str(update)[:500] if update else 'None'}</code>
+
+<b>Traceback:</b>
+<pre>{traceback.format_exc()[:1000]}</pre>
+            """
+            
+            send_admin_notification(admin_message)
+        except Exception as e:
+            logger.error(f"Error in error handler: {e}")
+    
     # Notify user about the error if possible
-    if update.effective_message:
-        update.effective_message.reply_text('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.')
+    if update and update.effective_message:
+        try:
+            update.effective_message.reply_text('Bir hata oluştu. Lütfen daha sonra tekrar deneyin.')
+        except:
+            pass  # Ignore if we can't send user notification
 
 def main():
     """Start the bot."""
