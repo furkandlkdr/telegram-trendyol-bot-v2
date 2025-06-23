@@ -43,7 +43,7 @@ def start(update: Update, context: CallbackContext):
 
 def extract_url(text):
     """Extract URL from text."""
-    url_pattern = r'https?://(?:www\.)?(trendyol\.com|ty\.gl)[^\s]+'
+    url_pattern = r'https?://(?:www\.)?(trendyol\.com|ty\.gl|tyml\.gl|trendyol-milla\.com)[^\s]+'
     match = re.search(url_pattern, text)
     return match.group(0) if match else None
 
@@ -74,7 +74,21 @@ def add_product_handler(update: Update, context: CallbackContext):
     # Fetch product info
     product_name, price, error = scrape_product_info(url)
     
-    if error:
+    if error == "Tükendi":
+        # Handle sold out product
+        success = add_product(chat_id, url, product_name, price)  # price is 0 for sold out products
+        
+        if success:
+            message.edit_text(
+                f'Ürün başarıyla eklendi!\n\n'
+                f'Ürün: {product_name}\n'
+                f'Durum: Tükendi\n\n'
+                f'Ürün tekrar stokta olduğunda size bildirim göndereceğim.'
+            )
+        else:
+            message.edit_text('Ürün eklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.')
+        return
+    elif error:
         message.edit_text(f'Hata: {error}')
         return
     
@@ -116,7 +130,21 @@ def url_handler(update: Update, context: CallbackContext):
     # Fetch product info
     product_name, price, error = scrape_product_info(url)
     
-    if error:
+    if error == "Tükendi":
+        # Handle sold out product
+        success = add_product(chat_id, url, product_name, price)  # price is 0 for sold out products
+        
+        if success:
+            message.edit_text(
+                f'Ürün başarıyla eklendi!\n\n'
+                f'Ürün: {product_name}\n'
+                f'Durum: Tükendi\n\n'
+                f'Ürün tekrar stokta olduğunda size bildirim göndereceğim.'
+            )
+        else:
+            message.edit_text('Ürün eklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.')
+        return
+    elif error:
         message.edit_text(f'Hata: {error}')
         return
     
@@ -190,6 +218,15 @@ def list_products(update: Update, context: CallbackContext):
         current_price = product_info.get('current_price', 0)
         initial_price = product_info.get('initial_price', 0)
         
+        # Check if product is sold out (price is 0)
+        if current_price == 0:
+            message += (
+                f'🔹 <b>{product_name}</b>\n'
+                f'   <b>Tükendi</b>\n'
+                f'   <a href="{url}">Link</a>\n\n'
+            )
+            continue
+        
         price_diff = current_price - initial_price
         if price_diff > 0:
             price_trend = f'📈 +{price_diff:.2f} TL'
@@ -229,6 +266,82 @@ def check_prices():
             current_price = product_info['current_price']
             
             logger.info(f"Checking price for {product_name} at {url}")
+            
+            # Fetch new product info
+            new_product_name, new_price, error = scrape_product_info(url)
+            
+            # Handle sold out status
+            if error == "Tükendi":
+                # If the product was available before but is now sold out
+                if current_price > 0:
+                    context.bot.send_message(
+                        chat_id=chat_id,
+                        text=f'⚠️ Ürün tükendi!\n\n'
+                             f'Ürün: {product_name}\n'
+                             f'Önceki Fiyat: {current_price:.2f} TL\n'
+                             f'Durum: Tükendi\n\n'
+                             f'<a href="{url}">Ürün Linki</a>',
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True
+                    )
+                    # Update the price to 0 to mark as sold out
+                    update_product_price(chat_id, url, 0)
+                continue
+            elif error:
+                logger.error(f"Error checking {url}: {error}")
+                continue
+            
+            if not new_price:
+                logger.error(f"Could not get price for {url}")
+                continue
+            
+            # If the product was sold out before but is now available
+            if current_price == 0 and new_price > 0:
+                context.bot.send_message(
+                    chat_id=chat_id,
+                    text=f'🎉 Ürün tekrar stokta!\n\n'
+                         f'Ürün: {product_name}\n'
+                         f'Güncel Fiyat: {new_price:.2f} TL\n\n'
+                         f'<a href="{url}">Ürün Linki</a>',
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+                update_product_price(chat_id, url, new_price)
+                continue
+            
+            # If price has changed
+            if new_price != current_price:
+                price_diff = new_price - current_price
+                percentage = (price_diff / current_price) * 100 if current_price > 0 else 0
+                
+                if price_diff > 0:
+                    message = (
+                        f'⚠️ Fiyat arttı!\n\n'
+                        f'Ürün: {product_name}\n'
+                        f'Önceki Fiyat: {current_price:.2f} TL\n'
+                        f'Yeni Fiyat: {new_price:.2f} TL\n'
+                        f'Fark: +{price_diff:.2f} TL ({percentage:.1f}%)\n\n'
+                        f'<a href="{url}">Ürün Linki</a>'
+                    )
+                else:
+                    message = (
+                        f'🔥 Fiyat düştü!\n\n'
+                        f'Ürün: {product_name}\n'
+                        f'Önceki Fiyat: {current_price:.2f} TL\n'
+                        f'Yeni Fiyat: {new_price:.2f} TL\n'
+                        f'Fark: {price_diff:.2f} TL ({percentage:.1f}%)\n\n'
+                        f'<a href="{url}">Ürün Linki</a>'
+                    )
+                
+                context.bot.send_message(
+                    chat_id=chat_id,
+                    text=message,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+                
+                # Update the price
+                update_product_price(chat_id, url, new_price)
             
             try:
                 _, new_price, error = scrape_product_info(url)
@@ -323,7 +436,7 @@ def main():
     
     # Message handler for Trendyol links
     dispatcher.add_handler(MessageHandler(
-        Filters.text & ~Filters.command & Filters.regex(r'https?://(www\.)?(trendyol\.com|ty\.gl)'), 
+        Filters.text & ~Filters.command & Filters.regex(r'https?://(www\.)?(trendyol\.com|ty\.gl|tyml\.gl|trendyol-milla\.com)'), 
         url_handler
     ))
     
@@ -350,3 +463,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

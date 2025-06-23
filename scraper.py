@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 def is_valid_trendyol_url(url):
     """Check if the URL is a valid Trendyol URL."""
-    return bool(re.match(r'https?://(www\.)?(trendyol\.com|ty\.gl).*', url))
+    return bool(re.match(r'https?://(www\.)?(trendyol\.com|ty\.gl|tyml\.gl|trendyol-milla\.com).*', url))
 
 def get_full_url(url):
     """Follow redirects to get the full URL if it's a shortened link."""
@@ -79,6 +79,15 @@ def scrape_product_info(url):
         elif soup.find('h1'):
             product_name = soup.find('h1').text.strip()
         
+        # Check if product is sold out
+        sold_out_button = soup.select_one('.product-button-container .add-to-basket.sold-out')
+        is_sold_out = False
+        
+        if sold_out_button and "Tükendi" in sold_out_button.text:
+            is_sold_out = True
+            logger.info(f"Product is sold out: {product_name}")
+            return product_name, 0, "Tükendi"
+        
         # Try different price selectors
         price = None
         price_selectors = [
@@ -114,3 +123,4 @@ def scrape_product_info(url):
     except Exception as e:
         logger.error(f"Error scraping {url}: {e}")
         return None, None, f"Error scraping product: {str(e)}"
+
