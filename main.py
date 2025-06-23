@@ -16,6 +16,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Global variable to store bot instance
+_bot_instance = None
+
 def is_allowed_chat(chat_id):
     """Check if the chat_id is in the allowed list."""
     return chat_id in ALLOWED_GROUP_IDS
@@ -203,8 +206,17 @@ def list_products(update: Update, context: CallbackContext):
     
     update.message.reply_text(message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
-def check_prices(context: CallbackContext = None):
+# Global variable to store bot instance
+_bot_instance = None
+
+def check_prices():
     """Check prices for all tracked products and notify if there's a change."""
+    global _bot_instance
+    
+    if not _bot_instance:
+        logger.error("Bot instance not available for price checking")
+        return
+        
     data = get_all_products()
     
     if not data:
@@ -237,29 +249,32 @@ def check_prices(context: CallbackContext = None):
                     # Prepare and send notification
                     price_diff = new_price - current_price
                     if price_diff > 0:
-                        trend_emoji = "📈"
+                        trend_emoji = "📈 Fiyat Yükseldi"
+                        trend_color = "🔴"
                     else:
-                        trend_emoji = "📉"
+                        trend_emoji = "📉 Fiyat Düştü"
+                        trend_color = "🟢"
                     
                     notification_text = (
-                        f'{trend_emoji} <b>Fiyat Değişikliği!</b>\n\n'
+                        f'{trend_color} <b>{trend_emoji}!</b>\n\n'
                         f'<b>{product_name}</b>\n'
                         f'Eski Fiyat: <b>{current_price:.2f} TL</b>\n'
                         f'Yeni Fiyat: <b>{new_price:.2f} TL</b>\n'
-                        f'Fark: <b>{price_diff:.2f} TL (%{(price_diff/current_price*100):.1f})</b>\n\n'
+                        f'Fark: <b>{price_diff:+.2f} TL (%{(price_diff/current_price*100):+.1f})</b>\n\n'
                         f'<a href="{url}">Ürüne Git</a>'
                     )
                     
                     # Send notification
-                    if context:
-                        context.bot.send_message(
-                            chat_id=chat_id,
+                    try:
+                        _bot_instance.send_message(
+                            chat_id=int(chat_id),
                             text=notification_text,
                             parse_mode=ParseMode.HTML,
                             disable_web_page_preview=True
                         )
-                    else:
-                        logger.info(f"Price change notification: {notification_text}")
+                        logger.info(f"Price change notification sent to {chat_id}")
+                    except Exception as send_error:
+                        logger.error(f"Failed to send notification to {chat_id}: {send_error}")
                 else:
                     logger.info(f"No price change for {product_name}")
             
@@ -281,6 +296,8 @@ def error(update: Update, context: CallbackContext):
 
 def main():
     """Start the bot."""
+    global _bot_instance
+    
     if not TELEGRAM_BOT_TOKEN:
         logger.error("No token provided. Set TELEGRAM_BOT_TOKEN in .env file.")
         return
@@ -291,6 +308,9 @@ def main():
     
     # Create the Updater and pass it the bot's token
     updater = Updater(TELEGRAM_BOT_TOKEN)
+    
+    # Store bot instance globally for price checking
+    _bot_instance = updater.bot
     
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
@@ -310,8 +330,11 @@ def main():
     # Error handler
     dispatcher.add_error_handler(error)
     
+    # Clear any existing scheduled jobs to prevent duplicates
+    schedule.clear()
+    
     # Schedule price checking based on the defined interval
-    schedule.every(CHECK_INTERVAL).minutes.do(check_prices, context=updater.dispatcher)
+    schedule.every(CHECK_INTERVAL).minutes.do(check_prices)
     
     # Start the scheduler in a new thread
     scheduler_thread = threading.Thread(target=run_scheduler)
