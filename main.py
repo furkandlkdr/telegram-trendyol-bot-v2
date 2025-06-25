@@ -276,9 +276,65 @@ def check_prices():
                 # Fetch new product info
                 _, new_price, error = scrape_product_info(url)
                 
+                # Handle sold-out products specially
+                if error == "Tükendi":
+                    # Product is sold out
+                    if current_price != 0:  # Only update if not already marked as sold out
+                        update_product_price(chat_id, url, 0)
+                        
+                        # Send sold-out notification
+                        notification_text = (
+                            f'🚫 <b>Ürün Tükendi!</b>\n\n'
+                            f'<b>{product_name}</b>\n'
+                            f'Eski Fiyat: <b>{current_price:.2f} TL</b>\n'
+                            f'Durum: <b>Stoklar Tükendi</b>\n\n'
+                            f'Ürün tekrar stokta olduğunda bildirim göndereceğim.\n\n'
+                            f'<a href="{url}">Ürüne Git</a>'
+                        )
+                        
+                        try:
+                            _bot_instance.send_message(
+                                chat_id=int(chat_id),
+                                text=notification_text,
+                                parse_mode=ParseMode.HTML,
+                                disable_web_page_preview=True
+                            )
+                            logger.info(f"Sold-out notification sent to {chat_id}")
+                        except Exception as send_error:
+                            logger.error(f"Failed to send sold-out notification to {chat_id}: {send_error}")
+                            error_count += 1
+                    else:
+                        logger.info(f"Product {product_name} is still sold out")
+                    continue
+                
                 if error:
                     logger.error(f"Error checking {url}: {error}")
                     error_count += 1
+                    continue
+                
+                # Handle case where product was sold out but now has a price (back in stock)
+                if current_price == 0 and new_price and new_price > 0:
+                    # Product is back in stock!
+                    update_product_price(chat_id, url, new_price)
+                    
+                    notification_text = (
+                        f'🟢 <b>Ürün Tekrar Stokta!</b>\n\n'
+                        f'<b>{product_name}</b>\n'
+                        f'Yeni Fiyat: <b>{new_price:.2f} TL</b>\n\n'
+                        f'<a href="{url}">Ürüne Git</a>'
+                    )
+                    
+                    try:
+                        _bot_instance.send_message(
+                            chat_id=int(chat_id),
+                            text=notification_text,
+                            parse_mode=ParseMode.HTML,
+                            disable_web_page_preview=True
+                        )
+                        logger.info(f"Back-in-stock notification sent to {chat_id}")
+                    except Exception as send_error:
+                        logger.error(f"Failed to send back-in-stock notification to {chat_id}: {send_error}")
+                        error_count += 1
                     continue
                 
                 if new_price is None:
@@ -485,9 +541,67 @@ def refresh_prices_handler(update: Update, context: CallbackContext):
             # Fetch new product info
             _, new_price, error = scrape_product_info(url)
             
+            # Handle sold-out products specially
+            if error == "Tükendi":
+                # Product is sold out
+                checked_count += 1
+                if current_price != 0:  # Only update if not already marked as sold out
+                    changed_count += 1
+                    update_product_price(chat_id, url, new_price)  # new_price is 0 for sold out
+                    
+                    # Send sold-out notification
+                    notification_text = (
+                        f'🚫 <b>Ürün Tükendi! (Manuel Kontrol)</b>\n\n'
+                        f'<b>{product_name}</b>\n'
+                        f'Eski Fiyat: <b>{current_price:.2f} TL</b>\n'
+                        f'Durum: <b>Stoklar Tükendi</b>\n\n'
+                        f'Ürün tekrar stokta olduğunda bildirim göndereceğim.\n\n'
+                        f'<a href="{url}">Ürüne Git</a>'
+                    )
+                    
+                    try:
+                        context.bot.send_message(
+                            chat_id=chat_id,
+                            text=notification_text,
+                            parse_mode=ParseMode.HTML,
+                            disable_web_page_preview=True
+                        )
+                        logger.info(f"Manual sold-out notification sent to {chat_id}")
+                    except Exception as send_error:
+                        logger.error(f"Failed to send notification to {chat_id}: {send_error}")
+                        error_count += 1
+                continue
+            
             if error:
                 logger.error(f"Error checking {url}: {error}")
                 error_count += 1
+                continue
+            
+            # Handle case where product was sold out but now has a price (back in stock)
+            if current_price == 0 and new_price and new_price > 0:
+                # Product is back in stock!
+                checked_count += 1
+                changed_count += 1
+                update_product_price(chat_id, url, new_price)
+                
+                notification_text = (
+                    f'🟢 <b>Ürün Tekrar Stokta! (Manuel Kontrol)</b>\n\n'
+                    f'<b>{product_name}</b>\n'
+                    f'Yeni Fiyat: <b>{new_price:.2f} TL</b>\n\n'
+                    f'<a href="{url}">Ürüne Git</a>'
+                )
+                
+                try:
+                    context.bot.send_message(
+                        chat_id=chat_id,
+                        text=notification_text,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True
+                    )
+                    logger.info(f"Manual back-in-stock notification sent to {chat_id}")
+                except Exception as send_error:
+                    logger.error(f"Failed to send notification to {chat_id}: {send_error}")
+                    error_count += 1
                 continue
             
             if new_price is None:
