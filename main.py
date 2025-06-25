@@ -39,7 +39,8 @@ def start(update: Update, context: CallbackContext):
         'Komutlar:\n'
         '/ekle [Trendyol linki] - Fiyat takibi için yeni bir ürün ekler\n'
         '/sil [Trendyol linki] - Takipten bir ürün çıkarır\n'
-        '/listele - Takip edilen tüm ürünleri listeler\n\n'
+        '/listele - Takip edilen tüm ürünleri listeler\n'
+        '/yenile - Tüm ürünlerin fiyatlarını manuel olarak kontrol eder\n\n'
         'Ayrıca, direkt olarak Trendyol.com veya ty.gl linki göndererek de ürün ekleyebilirsiniz.'
     )
 
@@ -424,6 +425,7 @@ def main():
     dispatcher.add_handler(CommandHandler("ekle", add_product_handler))
     dispatcher.add_handler(CommandHandler("sil", remove_product_handler))
     dispatcher.add_handler(CommandHandler("listele", list_products))
+    dispatcher.add_handler(CommandHandler("yenile", refresh_prices_handler))
     
     # Message handler for Trendyol links
     dispatcher.add_handler(MessageHandler(
@@ -451,6 +453,111 @@ def main():
     
     # Run the bot until the user presses Ctrl-C or the process receives SIGINT, SIGTERM or SIGABRT
     updater.idle()
+
+def refresh_prices_handler(update: Update, context: CallbackContext):
+    """Manual refresh command to check all tracked products immediately."""
+    chat_id = update.effective_chat.id
+    
+    # Check if the chat is allowed
+    if not is_allowed_chat(chat_id):
+        logger.info(f"Unauthorized refresh command from chat_id: {chat_id}")
+        return
+    
+    # Get products for this specific chat
+    products = get_all_products(chat_id)
+    
+    if not products:
+        update.message.reply_text('Henüz takip edilen ürün bulunmamaktadır.')
+        return
+    
+    # Send initial message
+    message = update.message.reply_text(f'🔄 Fiyatlar kontrol ediliyor... ({len(products)} ürün)')
+    
+    checked_count = 0
+    changed_count = 0
+    error_count = 0
+    
+    for url, product_info in products.items():
+        try:
+            product_name = product_info['product_name']
+            current_price = product_info['current_price']
+            
+            # Fetch new product info
+            _, new_price, error = scrape_product_info(url)
+            
+            if error:
+                logger.error(f"Error checking {url}: {error}")
+                error_count += 1
+                continue
+            
+            if new_price is None:
+                logger.error(f"Could not get price for {url}")
+                error_count += 1
+                continue
+            
+            checked_count += 1
+            
+            # If the price has changed
+            if abs(new_price - current_price) > 0.01:  # Allow for small decimal differences
+                changed_count += 1
+                
+                # Update the price in the database
+                update_product_price(chat_id, url, new_price)
+                
+                # Prepare and send notification
+                price_diff = new_price - current_price
+                if price_diff > 0:
+                    trend_emoji = "📈 Fiyat Yükseldi"
+                    trend_color = "🔴"
+                else:
+                    trend_emoji = "📉 Fiyat Düştü"
+                    trend_color = "🟢"
+                
+                notification_text = (
+                    f'{trend_color} <b>{trend_emoji}! (Manuel Kontrol)</b>\n\n'
+                    f'<b>{product_name}</b>\n'
+                    f'Eski Fiyat: <b>{current_price:.2f} TL</b>\n'
+                    f'Yeni Fiyat: <b>{new_price:.2f} TL</b>\n'
+                    f'Fark: <b>{price_diff:+.2f} TL (%{(price_diff/current_price*100):+.1f})</b>\n\n'
+                    f'<a href="{url}">Ürüne Git</a>'
+                )
+                
+                # Send notification immediately
+                try:
+                    context.bot.send_message(
+                        chat_id=chat_id,
+                        text=notification_text,
+                        parse_mode=ParseMode.HTML,
+                        disable_web_page_preview=True
+                    )
+                    logger.info(f"Manual price change notification sent to {chat_id}")
+                except Exception as send_error:
+                    logger.error(f"Failed to send notification to {chat_id}: {send_error}")
+                    error_count += 1
+        
+        except Exception as e:
+            logger.error(f"Error checking price for {url}: {e}")
+            error_count += 1
+    
+    # Update the status message with results
+    if error_count > 0:
+        status_emoji = "⚠️"
+        status_text = f"tamamlandı (bazı hatalarla)"
+    else:
+        status_emoji = "✅"
+        status_text = "tamamlandı"
+    
+    final_message = (
+        f'{status_emoji} <b>Fiyat kontrolü {status_text}</b>\n\n'
+        f'📊 <b>Özet:</b>\n'
+        f'• Toplam ürün: {len(products)}\n'
+        f'• Kontrol edilen: {checked_count}\n'
+        f'• Fiyat değişen: {changed_count}\n'
+        f'• Hata: {error_count}\n\n'
+        f'💡 Otomatik kontrol {CHECK_INTERVAL} dakikada bir yapılmaktadır.'
+    )
+    
+    message.edit_text(final_message, parse_mode=ParseMode.HTML)
 
 if __name__ == '__main__':
     main()

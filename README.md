@@ -13,6 +13,7 @@ An advanced Telegram bot that tracks product prices on Trendyol and sends smart 
   - 📈 "Price Increased" notifications with red indicator
   - 📉 "Price Decreased" notifications with green indicator
   - Detailed price difference and percentage change
+- 🔄 **Manual Refresh**: Use `/yenile` command to instantly check all product prices
 - 🏠 **Multi-Group Support**: Restrict bot access to specific Telegram groups
 - ⚡ **Optimized Performance**: Lightweight code perfect for Raspberry Pi and low-power devices
 - 🛡️ **Enhanced Error Handling**: Robust error management and logging
@@ -91,6 +92,7 @@ To find your Telegram group ID:
 | `/ekle [URL]` | Add product to tracking | `/ekle https://www.trendyol.com/...` |
 | `/sil [URL]` | Remove product from tracking | `/sil https://www.trendyol.com/...` |
 | `/listele` | List all tracked products | `/listele` |
+| `/yenile` | Manual refresh - Check all product prices instantly | `/yenile` |
 
 ### Adding Products
 
@@ -115,13 +117,22 @@ The `/listele` command shows:
 - Direct links to products
 - Current vs initial price comparison
 
+### Manual Price Check
+
+Use `/yenile` command to instantly check all tracked product prices:
+- 🔄 **Instant Check**: Immediately checks all products without waiting for scheduled interval
+- 📊 **Summary Report**: Shows how many products were checked and how many prices changed
+- 🔔 **Immediate Notifications**: Sends instant notifications for any price changes found
+- ⚡ **Safe Operation**: Uses the same functions as automatic checking, no system conflicts
+
 ## 🔄 How It Works
 
 1. **Product Addition**: Bot scrapes product name and current price
 2. **Data Storage**: Information saved in `tracked_products.json`
 3. **Scheduled Checks**: Bot checks prices every X minutes (configurable)
-4. **Smart Notifications**: Only sends alerts when prices actually change
-5. **Price Updates**: Database automatically updates with new prices
+4. **Manual Checks**: Use `/yenile` command for instant price checking
+5. **Smart Notifications**: Only sends alerts when prices actually change
+6. **Price Updates**: Database automatically updates with new prices
 
 ## 🐧 Automatic Startup (Linux/Raspberry Pi)
 
@@ -270,6 +281,7 @@ Trendyol'daki ürün fiyatlarını takip eden ve fiyat değişikliklerinde akıl
   - 📈 Kırmızı gösterge ile "Fiyat Yükseldi" bildirimleri
   - 📉 Yeşil gösterge ile "Fiyat Düştü" bildirimleri
   - Detaylı fiyat farkı ve yüzde değişim bilgisi
+- 🔄 **Manuel Yenileme**: `/yenile` komutu ile tüm ürün fiyatlarını anında kontrol edin
 - 🏠 **Çoklu Grup Desteği**: Bot erişimini belirli Telegram gruplarıyla sınırlayın
 - ⚡ **Optimize Edilmiş Performans**: Raspberry Pi ve düşük güçlü cihazlar için mükemmel hafif kod
 - 🛡️ **Gelişmiş Hata Yönetimi**: Sağlam hata yönetimi ve loglama
@@ -348,6 +360,7 @@ Telegram grup ID'nizi bulmak için:
 | `/ekle [URL]` | Ürünü takibe ekle | `/ekle https://www.trendyol.com/...` |
 | `/sil [URL]` | Ürünü takipten çıkar | `/sil https://www.trendyol.com/...` |
 | `/listele` | Tüm takip edilen ürünleri listele | `/listele` |
+| `/yenile` | Manuel yenileme - Tüm ürün fiyatlarını anında kontrol et | `/yenile` |
 
 ### Ürün Ekleme
 
@@ -372,13 +385,22 @@ https://ty.gl/kisaltilmis-link
 - Ürünlere direkt linkler
 - Güncel ve başlangıç fiyat karşılaştırması
 
+### Manuel Fiyat Kontrolü
+
+`/yenile` komutu ile tüm takip edilen ürün fiyatlarını anında kontrol edin:
+- 🔄 **Anında Kontrol**: Zamanlanmış aralığı beklemeden tüm ürünleri hemen kontrol eder
+- 📊 **Özet Rapor**: Kaç ürün kontrol edildiğini ve kaç tanesinde fiyat değiştiğini gösterir
+- 🔔 **Anında Bildirimler**: Bulunan fiyat değişiklikleri için anında bildirim gönderir
+- ⚡ **Güvenli İşlem**: Otomatik kontrolle aynı fonksiyonları kullanır, sistem çakışması yaşanmaz
+
 ## 🔄 Nasıl Çalışır
 
 1. **Ürün Ekleme**: Bot ürün adını ve güncel fiyatı çeker
 2. **Veri Saklama**: Bilgiler `tracked_products.json` dosyasında saklanır
 3. **Zamanlanmış Kontroller**: Bot her X dakikada bir fiyatları kontrol eder (yapılandırılabilir)
-4. **Akıllı Bildirimler**: Sadece fiyatlar gerçekten değiştiğinde uyarı gönderir
-5. **Fiyat Güncellemeleri**: Veritabanı otomatik olarak yeni fiyatlarla güncellenir
+4. **Manuel Kontroller**: `/yenile` komutu ile anında fiyat kontrolü yapın
+5. **Akıllı Bildirimler**: Sadece fiyatlar gerçekten değiştiğinde uyarı gönderir
+6. **Fiyat Güncellemeleri**: Veritabanı otomatik olarak yeni fiyatlarla güncellenir
 
 ## 🐧 Otomatik Başlatma (Linux/Raspberry Pi)
 
