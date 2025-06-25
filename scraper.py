@@ -82,11 +82,38 @@ def scrape_product_info(url):
         elif soup.find('h1'):
             product_name = soup.find('h1').text.strip()
         
-        # Check if product is sold out
-        sold_out_button = soup.select_one('.product-button-container .add-to-basket.sold-out')
+        # Check if product is sold out - Enhanced detection
         is_sold_out = False
         
+        # Method 1: Check specific sold-out button selector
+        sold_out_button = soup.select_one('.product-button-container .add-to-basket.sold-out')
         if sold_out_button and "Tükendi" in sold_out_button.text:
+            is_sold_out = True
+        
+        # Method 2: Check for any text containing "Stoklar Tükendi" or "Tükendi"
+        if not is_sold_out:
+            sold_out_texts = soup.find_all(string=lambda text: text and ('Stoklar Tükendi' in text or 'Tükendi' in text))
+            if sold_out_texts:
+                is_sold_out = True
+                logger.info(f"Sold out detected via text: {sold_out_texts[0].strip()}")
+        
+        # Method 3: Check add-to-basket button text and disabled state
+        if not is_sold_out:
+            add_to_basket_btn = soup.find('button', class_='add-to-basket')
+            if add_to_basket_btn:
+                btn_text = add_to_basket_btn.get_text().strip()
+                if 'Tükendi' in btn_text or 'Stok' in btn_text or add_to_basket_btn.get('disabled'):
+                    is_sold_out = True
+                    logger.info(f"Sold out detected via button: {btn_text}")
+        
+        # Method 4: Check for sold-out related CSS classes
+        if not is_sold_out:
+            sold_out_elements = soup.select('.sold-out, .stok-yok, .out-of-stock')
+            if sold_out_elements:
+                is_sold_out = True
+                logger.info("Sold out detected via CSS class")
+        
+        if is_sold_out:
             is_sold_out = True
             logger.info(f"Product is sold out: {product_name}")
             return product_name, 0, "Tükendi"
