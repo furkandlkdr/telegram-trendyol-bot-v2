@@ -34,7 +34,10 @@ def extract_price(text):
     # Extract numbers with decimal points using regex
     match = re.search(r'(\d+[,.]\d+|\d+)', price_text)
     if match:
-        return float(match.group(1).replace(',', '.'))
+        price = float(match.group(1).replace(',', '.'))
+        # Add reasonable bounds check to avoid interpreting IDs as prices
+        if 0.01 <= price <= 100000:  # Reasonable price range
+            return price
     return None
 
 def scrape_product_info(url):
@@ -101,13 +104,44 @@ def scrape_product_info(url):
                 price = extract_price(price_tag.text)
                 if price:
                     break
+        
+        # If no price found with selectors, try JSON-LD data
+        if not price:
+            # Look for JSON-LD structured data which contains price information
+            script_tags = soup.find_all('script', type='application/ld+json')
+            for script in script_tags:
+                try:
+                    import json
+                    data = json.loads(script.string)
+                    if isinstance(data, dict) and 'offers' in data:
+                        offers = data['offers']
+                        if isinstance(offers, dict) and 'price' in offers:
+                            price = float(offers['price'])
+                            break
+                except:
+                    continue
+        
+        # If still no price, try JavaScript variables
+        if not price:
+            # Look for window variables containing price data
+            script_tags = soup.find_all('script')
+            for script in script_tags:
+                if script.string and 'winnerVariant' in script.string:
+                    # Extract price from winnerVariant data
+                    import re
+                    price_match = re.search(r'"price":\s*{\s*[^}]*"value":\s*([0-9.]+)', script.string)
+                    if price_match:
+                        price = float(price_match.group(1))
+                        break
                     
         if not price:
-            # Try to find any element containing TL
-            price_elements = soup.find_all(text=re.compile(r'TL|₺'))
+            # Try to find any element containing TL as fallback (but be more careful)
+            price_elements = soup.find_all(text=re.compile(r'\d+[,.]?\d*\s*TL|\d+[,.]?\d*\s*₺'))
             for element in price_elements:
-                price = extract_price(element)
-                if price:
+                # Only extract if it looks like a price (not too large to be an ID)
+                extracted_price = extract_price(element)
+                if extracted_price and extracted_price < 100000:  # Reasonable price limit
+                    price = extracted_price
                     break
         
         if not product_name:
